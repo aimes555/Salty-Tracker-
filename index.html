@@ -697,48 +697,8 @@ window.addEventListener('unhandledrejection', e => {
   showError('Something went wrong (' + (e.reason && e.reason.message ? e.reason.message : 'unknown error') + '). Try reloading the page.');
 });
 
-/* ---------- Google Sheets storage ---------- */
-const SHEET_ID   = '1ttodsmgzRXee-g7C839aZuXLsQfG_bHCw730y7qVlVY';
-const API_KEY    = 'AIzaSyCBvqxfgMtt5ZSPfNi6_Gp_eu28lYtj42M';   // ← paste your regenerated key here
-const SHEET_NAME = 'Orders';
-const BASE_URL   = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
-
-// We store the entire projects array as JSON in cell A1, board title in B1.
-async function sheetsGet(range) {
-  const url = `${BASE_URL}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Sheets read failed: ${r.status} ${r.statusText}`);
-  const data = await r.json();
-  return data.values?.[0]?.[0] ?? null;
-}
-
-async function sheetsSet(range, value) {
-  const url = `${BASE_URL}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${API_KEY}`;
-  const r = await fetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ range, majorDimension: 'ROWS', values: [[value]] }),
-  });
-  if (!r.ok) {
-    const text = await r.text().catch(() => '');
-    throw new Error(`Sheets write failed: ${r.status} — ${text.slice(0, 200)}`);
-  }
-}
-
-async function ensureSheet() {
-  const metaUrl = `${BASE_URL}?key=${API_KEY}`;
-  const r = await fetch(metaUrl);
-  if (!r.ok) throw new Error(`Cannot reach your Google Sheet (${r.status}). Check that the Sheet ID is correct and the sheet is shared as "Anyone with link can edit."`);
-  const meta = await r.json();
-  const exists = (meta.sheets || []).some(s => s.properties.title === SHEET_NAME);
-  if (!exists) {
-    await fetch(`${BASE_URL}:batchUpdate?key=${API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: SHEET_NAME } } }] }),
-    });
-  }
-}
+/* ---------- Google Apps Script storage ---------- */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzEruHSqd4_WdWRtNwLfd86S_Povo9cEtugq_Q2CHVsMSRVmClA2teOdvUNjXMdxSSu/exec';
 
 function flashSaveStatus(text) {
   const el = document.getElementById('saveStatus');
@@ -786,11 +746,12 @@ function migrateProjects(list) {
 async function loadData() {
   showSyncing();
   try {
-    await ensureSheet();
-    const raw = await sheetsGet(`${SHEET_NAME}!A1`);
-    projects = raw ? migrateProjects(JSON.parse(raw)) : [];
-    const title = await sheetsGet(`${SHEET_NAME}!B1`);
-    if (title) document.getElementById('boardTitle').value = title;
+    const r = await fetch(APPS_SCRIPT_URL);
+    if (!r.ok) throw new Error(`Server responded with ${r.status}`);
+    const json = await r.json();
+    try { projects = json.data ? migrateProjects(JSON.parse(json.data)) : []; }
+    catch (e) { projects = []; }
+    if (json.title) document.getElementById('boardTitle').value = json.title;
     document.getElementById('errorBanner').hidden = true;
     flashSaveStatus('✓ Loaded');
   } catch (err) {
@@ -802,7 +763,11 @@ async function loadData() {
 async function persistProjects() {
   showSyncing();
   try {
-    await sheetsSet(`${SHEET_NAME}!A1`, JSON.stringify(projects));
+    const r = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ data: JSON.stringify(projects) }),
+    });
+    if (!r.ok) throw new Error(`Server responded with ${r.status}`);
     document.getElementById('errorBanner').hidden = true;
     flashSaveStatus('✓ Saved');
   } catch (err) {
@@ -811,7 +776,12 @@ async function persistProjects() {
 }
 
 async function persistTitle(title) {
-  try { await sheetsSet(`${SHEET_NAME}!B1`, title); } catch (_) {}
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    });
+  } catch (_) {}
 }
 
 
