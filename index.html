@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Board</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+* { box-sizing: border-box; }
+
+:root {
+  --canvas: #e7e0d1;
+  --panel: #fbf8f2;
+  --ink: #2b2925;
+  --ink-soft: #8a8175;
+  --line: #d8cdb9;
+  --navy: #38506b;
+  --rust: #c1542d;
+}
+
+html, body { margin: 0; }
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: 'Work Sans', sans-serif;
+  min-height: 100vh;
+}
+
+/* ---------- topbar ---------- */
+.topbar {
+  background: var(--navy);
+  color: #fbf8f2;
+  padding: 16px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 4px solid var(--ink);
+}
+.brand { display: flex; flex-direction: column; gap: 2px; min-width: 180px; }
+.board-title {
+  font-family: 'Zilla Slab', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #fbf8f2;
+  padding: 2px 4px;
+  border-radius: 4px;
+  max-width: 320px;
+}
+.board-title:hover { border-color: rgba(255,255,255,0.25); }
+.board-title:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.06);
+}
+.brand-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c9d4de;
+}
+.topbar-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+#searchInput {
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.9rem;
+  padding: 9px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color: #fbf8f2;
+  min-width: 220px;
+}
+#searchInput::placeholder { color: #c9d4de; }
+#searchInput:focus { outline: 2px solid #d6a24c; }
+
+.btn-primary, .btn-secondary {
+  font-family: 'Work Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+}
+.btn-primary {
+  background: var(--rust);
+  color: #fbf8f2;
+  padding: 9px 16px;
+  font-size: 0.9rem;
+}
+.btn-primary:hover { background: #a8431f; }
+.btn-primary:focus-visible, .btn-secondary:focus-visible, .icon-btn:focus-visible,
+.board-title:focus-visible, #searchInput:focus-visible { outline: 2px solid #d6a24c; outline-offset: 1px; }
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fbf8f2;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.1); }
+.btn-secondary.small { padding: 6px 10px; font-size: 0.78rem; }
+
+/* ---------- master list (dashboard) ---------- */
+.masterlist { padding: 18px 24px 4px; }
+.masterlist-header {
+  display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.masterlist-header h2 {
+  font-family: 'Zilla Slab', serif;
+  font-size: 1.15rem;
+  margin: 0;
+  color: var(--ink);
+}
+.masterlist-header .brand-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.masterlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+.ml-panel {
+  background: var(--panel);
+  border-radius: 4px;
+  border-top: 4px solid var(--navy);
+  padding: 10px 12px;
+  display: flex; flex-direction: column;
+  max-height: 260px;
+}
+.ml-priority-panel   { border-top-color: var(--navy); }
+.ml-items-panel      { border-top-color: #A8895E; }
+.ml-digitizing-panel { border-top-color: #4A7A96; }
+.ml-dtf-panel        { border-top-color: #6B5B95; }
+.ml-invoices-panel   { border-top-color: #B5704A; }
+.ml-panel h3 {
+  font-family: 'Zilla Slab', serif;
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+  display: flex; justify-content: space-between; align-items: center; gap: 6px;
+}
+.ml-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  background: var(--canvas);
+  padding: 1px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.ml-items { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.ml-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.82rem;
+  padding: 4px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.ml-row:hover { background: var(--canvas); }
+.ml-row .ml-name { flex: 1; word-break: break-word; }
+.ml-toggle { flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
+.ml-empty {
+  font-size: 0.78rem; color: var(--ink-soft); font-style: italic; margin: 4px 0;
+}
+.priority-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--ink);
+  background: var(--p-color);
+  flex-shrink: 0;
+}
+
+/* ---------- board ---------- */
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 270px;
+  gap: 16px;
+  padding: 20px 24px 40px;
+  overflow-x: auto;
+  align-items: start;
+}
+.column { display: flex; flex-direction: column; min-width: 0; }
+.column-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: 4px 4px 0 0;
+  border-top: 4px solid var(--stage-color);
+  border-bottom: 1px dashed var(--line);
+}
+.column-header .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--stage-color);
+  flex-shrink: 0;
+}
+.column-header h2 {
+  font-family: 'Zilla Slab', serif;
+  font-size: 0.92rem;
+  margin: 0;
+  flex: 1;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.column-header .count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  background: var(--canvas);
+  padding: 2px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.cards {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 10px;
+  background: rgba(251,248,242,0.55);
+  border-radius: 0 0 4px 4px;
+  min-height: 70px;
+  flex: 1;
+}
+.empty {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-style: italic;
+  text-align: center;
+  margin: 14px 4px;
+}
+
+/* ---------- cards ---------- */
+.card {
+  background: var(--panel);
+  border-radius: 4px;
+  border-left: 5px solid var(--stage-color);
+  box-shadow: 0 1px 3px rgba(43,41,37,0.1);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.card:hover { box-shadow: 0 2px 8px rgba(43,41,37,0.15); }
+.card-head {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+}
+.card-head h3 {
+  font-family: 'Zilla Slab', serif;
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 600;
+  word-break: break-word;
+}
+.card-title {
+  display: flex; align-items: center; gap: 6px;
+  flex: 1; min-width: 0;
+}
+.card-title h3 { flex: 1; min-width: 0; }
+.prep-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; margin-bottom: 4px; }
+.prep-tag {
+  display: flex; align-items: center; gap: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  background: var(--canvas);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.prep-tag input { width: 12px; height: 12px; cursor: pointer; accent-color: var(--navy); }
+.prep-tag.done { text-decoration: line-through; color: var(--ink-soft); }
+.card-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  padding: 3px 5px;
+  border-radius: 3px;
+  line-height: 1;
+}
+.icon-btn:hover { background: var(--canvas); color: var(--ink); }
+.delete-btn.confirming { color: #a8431f; font-weight: 600; font-size: 0.68rem; padding: 3px 6px; }
+.contact {
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  margin: 0 0 6px;
+}
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  background: var(--canvas);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--ink);
+}
+.notes {
+  font-size: 0.8rem;
+  background: #f0ead9;
+  border-radius: 3px;
+  padding: 5px 7px;
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+}
+.card-footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 6px;
+  padding-top: 6px; border-top: 1px dashed var(--line);
+}
+.date {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+.stage-select {
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.74rem;
+  padding: 3px 4px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: var(--canvas);
+  color: var(--ink);
+  max-width: 140px;
+}
+
+/* ---------- modal ---------- */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(43,41,37,0.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; z-index: 100;
+}
+.modal-overlay[hidden] { display: none; }
+.modal {
+  background: var(--panel);
+  border-radius: 6px;
+  width: 100%; max-width: 540px;
+  max-height: 90vh; overflow-y: auto;
+  padding: 22px 26px;
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.modal-header h2 { font-family: 'Zilla Slab', serif; margin: 0; font-size: 1.3rem; }
+#projectForm label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 0.82rem; font-weight: 600; color: var(--ink-soft);
+  margin-bottom: 12px;
+}
+#projectForm input, #projectForm textarea, #projectForm select {
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-weight: 400;
+}
+#projectForm input:focus, #projectForm textarea:focus, #projectForm select:focus {
+  outline: 2px solid #d6a24c;
+}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+.form-section { margin-bottom: 14px; }
+.section-label { font-size: 0.82rem; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+.priority-field { max-width: 220px; }
+.checkbox-section {
+  display: flex; flex-wrap: wrap; gap: 8px 16px;
+  align-items: center;
+  background: var(--canvas);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.checkbox-label {
+  display: flex !important; flex-direction: row !important; align-items: center; gap: 6px;
+  font-size: 0.85rem; font-weight: 500; color: var(--ink);
+  margin-bottom: 0 !important;
+  cursor: pointer;
+}
+.checkbox-label input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--navy); }
+.checkbox-label.conditional { padding-left: 4px; }
+.checkbox-label.conditional[hidden] { display: none !important; }
+.item-row {
+  background: var(--canvas);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.item-row-top { display: flex; gap: 6px; align-items: center; }
+.item-row-top .item-type { flex: 2; }
+.item-row-top .item-qty { flex: 1; min-width: 60px; }
+.item-design {
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  resize: vertical;
+}
+.item-design:focus { outline: 2px solid #d6a24c; }
+.item-prices-row { display: flex; gap: 10px; }
+.item-price-label {
+  display: flex !important; flex-direction: row !important; align-items: center;
+  gap: 4px; font-size: 0.8rem; font-weight: 500; color: var(--ink-soft);
+  margin-bottom: 0 !important;
+}
+.item-price-label input { width: 90px; }
+.shipping-field { max-width: 180px; }
+
+/* card item details */
+.item-details { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.item-detail {
+  background: var(--canvas);
+  border-radius: 3px;
+  padding: 5px 7px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.item-detail-name {
+  font-family: 'Zilla Slab', serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.item-detail-qty {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+.item-detail-design {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.item-detail-prices {
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+.item-detail-prices strong { color: var(--ink); margin-left: auto; }
+.card-total {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.card-footer { flex-direction: column; gap: 6px; }
+.card-footer-dates { display: flex; flex-direction: column; gap: 1px; }
+.card-footer-right { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+
+/* archive */
+.column-archive .column-header { opacity: 0.85; }
+.card-archived { opacity: 0.75; }
+.card-archived .card-head h3 { color: var(--ink-soft); }
+
+/* item row remove btn */
+.remove-item-row { font-size: 0.95rem; flex-shrink: 0; }
+.total-row {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600; margin: 2px 0 14px;
+  text-align: right; font-size: 0.95rem;
+  color: var(--ink);
+}
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.modal .btn-secondary { color: var(--ink); border: 1px solid var(--line); background: transparent; }
+.modal .btn-secondary:hover { background: var(--canvas); }
+
+.loading-screen {
+  padding: 80px 20px; text-align: center;
+  font-family: 'IBM Plex Mono', monospace; color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.error-banner {
+  background: #f3d9c9; color: #6b3216;
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem;
+  padding: 8px 24px;
+}
+.save-status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: #b6e2bd;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.save-status.visible { opacity: 1; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 640px) {
+  .topbar { flex-direction: column; align-items: stretch; }
+  .topbar-actions { flex-direction: column; align-items: stretch; }
+  #searchInput { min-width: 0; }
+  .board { grid-auto-columns: 84vw; padding: 14px; scroll-snap-type: x mandatory; }
+  .column { scroll-snap-align: start; }
+  .form-grid, .form-grid.three { grid-template-columns: 1fr; }
+  .masterlist { padding: 14px 14px 4px; }
+  .masterlist-grid { grid-template-columns: 1fr; }
+  .ml-panel { max-height: 200px; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <input id="boardTitle" class="board-title" value="Order Board" aria-label="Board title (click to rename)">
+    <span class="brand-sub">Embroidery &amp; DTF Workflow</span>
+    <span id="saveStatus" class="save-status" aria-live="polite"></span>
+  </div>
+  <div class="topbar-actions">
+    <input type="search" id="searchInput" placeholder="Search company or contact…" aria-label="Search orders">
+    <button id="newOrderBtn" class="btn-primary" type="button">+ New order</button>
+    <button id="clearAllBtn" class="btn-secondary small" type="button" title="Delete all saved orders">Clear all</button>
+  </div>
+</header>
+
+<div id="errorBanner" class="error-banner" hidden></div>
+
+<section class="masterlist" id="masterlist">
+  <div class="masterlist-header">
+    <h2>Master List</h2>
+    <span class="brand-sub">Synced with every project card</span>
+  </div>
+  <div class="masterlist-grid">
+    <div class="ml-panel ml-priority-panel">
+      <h3>Priority Order <span class="ml-count" id="ml-priority-count">0</span></h3>
+      <div class="ml-items" id="ml-priority"></div>
+    </div>
+    <div class="ml-panel ml-items-panel">
+      <h3>Items/Garments to Order <span class="ml-count" id="ml-items-count">0</span></h3>
+      <div class="ml-items" id="ml-items"></div>
+    </div>
+    <div class="ml-panel ml-digitizing-panel">
+      <h3>Needs Digitizing <span class="ml-count" id="ml-digitizing-count">0</span></h3>
+      <div class="ml-items" id="ml-digitizing"></div>
+    </div>
+    <div class="ml-panel ml-dtf-panel">
+      <h3>DTF to Order <span class="ml-count" id="ml-dtf-count">0</span></h3>
+      <div class="ml-items" id="ml-dtf"></div>
+    </div>
+    <div class="ml-panel ml-invoices-panel">
+      <h3>Invoices to Complete <span class="ml-count" id="ml-invoices-count">0</span></h3>
+      <div class="ml-items" id="ml-invoices"></div>
+    </div>
+  </div>
+</section>
+
+<main class="board" id="board">
+  <div class="loading-screen">Loading your orders…</div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">New order</h2>
+      <button class="icon-btn" id="closeModalBtn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="projectForm">
+      <div class="form-grid">
+        <label>Company name
+          <input type="text" id="f-companyName" autocomplete="off">
+        </label>
+        <label>Contact name
+          <input type="text" id="f-contactName" autocomplete="off">
+        </label>
+      </div>
+
+      <label class="priority-field">Priority
+        <select id="f-priority">
+          <option value="1">1 — Highest</option>
+          <option value="2">2</option>
+          <option value="3" selected>3 — Medium</option>
+          <option value="4">4</option>
+          <option value="5">5 — Lowest</option>
+        </select>
+      </label>
+
+      <div class="form-section checkbox-section">
+        <label class="checkbox-label"><input type="checkbox" id="f-needsDigitizing"> Needs digitizing</label>
+        <label class="checkbox-label conditional" id="f-digitizingDoneWrap" hidden>
+          <input type="checkbox" id="f-digitizingDone"> Digitizing complete
+        </label>
+        <label class="checkbox-label"><input type="checkbox" id="f-includesDTF"> Includes DTF</label>
+        <label class="checkbox-label conditional" id="f-dtfOrderedWrap" hidden>
+          <input type="checkbox" id="f-dtfOrdered"> DTF ordered
+        </label>
+        <label class="checkbox-label"><input type="checkbox" id="f-itemsOrdered"> Items/garments ordered</label>
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">Items / garments</div>
+        <div id="itemRows"></div>
+        <button type="button" id="addItemRowBtn" class="btn-secondary small">+ Add item</button>
+      </div>
+
+      <label class="shipping-field">Shipping ($)
+        <input type="number" id="f-shippingPrice" step="0.01" min="0" inputmode="decimal">
+      </label>
+      <div class="total-row">Order total: <span id="formTotal">$0.00</span></div>
+
+      <div id="stageFieldWrap">
+        <label>Stage
+          <select id="f-stage"></select>
+        </label>
+      </div>
+
+      <label>Additional notes
+        <textarea id="f-notes" rows="2"></textarea>
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" id="cancelBtn" class="btn-secondary">Cancel</button>
+        <button type="button" id="saveOrderBtn" class="btn-primary">Save order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STAGES = [
+  { id: 'pre_production',     label: 'Digitizing / DTF Prep', color: '#4A7A96' },
+  { id: 'test_stitch',        label: 'Test Stitch',          color: '#D6A24C' },
+  { id: 'stitching_printing', label: 'Stitching / Printing', color: '#C1542D' },
+  { id: 'shipped',            label: 'Ready to Ship',        color: '#6B5B95' },
+  { id: 'paid',               label: 'Awaiting Payment',     color: '#5A8F5A' },
+  { id: 'archived',           label: 'Archive',              color: '#9e9488' },
+];
+
+// Priority 1 = highest priority, 5 = lowest
+const PRIORITY_COLORS = {
+  1: '#e3a89a',
+  2: '#ecc59a',
+  3: '#ece6a0',
+  4: '#cfe3ad',
+  5: '#b3dcc0',
+};
+
+const PROJECTS_KEY = 'projects';
+const TITLE_KEY = 'board-title';
+
+let projects = [];
+let searchTerm = '';
+let editingId = null;
+let formItems = [];
+let deleteConfirmId = null;
+let clearConfirm = false;
+
+/* ---------- helpers ---------- */
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function numVal(id) {
+  const v = parseFloat(document.getElementById(id).value);
+  return isNaN(v) ? 0 : v;
+}
+function fmt(v) { return (Number(v) || 0).toFixed(2); }
+function calcTotal(p) {
+  const itemsTotal = (p.items || []).reduce((sum, it) => {
+    const qty = Number(it.qty) || 1;
+    return sum + ((Number(it.itemPrice) || 0) + (Number(it.embDtfPrice) || 0)) * qty;
+  }, 0);
+  return itemsTotal + (Number(p.shippingPrice) || 0);
+}
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+function genId() {
+  return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+window.addEventListener('error', e => {
+  showError('Something went wrong (' + (e.message || 'unknown error') + '). Try reloading the page.');
+});
+window.addEventListener('unhandledrejection', e => {
+  showError('Something went wrong (' + (e.reason && e.reason.message ? e.reason.message : 'unknown error') + '). Try reloading the page.');
+});
+
+/* ---------- Google Sheets storage ---------- */
+const SHEET_ID   = '1ttodsmgzRXee-g7C839aZuXLsQfG_bHCw730y7qVlVY';
+const API_KEY    = 'AIzaSyCBvqxfgMtt5ZSPfNi6_Gp_eu28lYtj42M';   // ← paste your regenerated key here
+const SHEET_NAME = 'Orders';
+const BASE_URL   = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
+
+// We store the entire projects array as JSON in cell A1, board title in B1.
+async function sheetsGet(range) {
+  const url = `${BASE_URL}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Sheets read failed: ${r.status} ${r.statusText}`);
+  const data = await r.json();
+  return data.values?.[0]?.[0] ?? null;
+}
+
+async function sheetsSet(range, value) {
+  const url = `${BASE_URL}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${API_KEY}`;
+  const r = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ range, majorDimension: 'ROWS', values: [[value]] }),
+  });
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    throw new Error(`Sheets write failed: ${r.status} — ${text.slice(0, 200)}`);
+  }
+}
+
+async function ensureSheet() {
+  const metaUrl = `${BASE_URL}?key=${API_KEY}`;
+  const r = await fetch(metaUrl);
+  if (!r.ok) throw new Error(`Cannot reach your Google Sheet (${r.status}). Check that the Sheet ID is correct and the sheet is shared as "Anyone with link can edit."`);
+  const meta = await r.json();
+  const exists = (meta.sheets || []).some(s => s.properties.title === SHEET_NAME);
+  if (!exists) {
+    await fetch(`${BASE_URL}:batchUpdate?key=${API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: SHEET_NAME } } }] }),
+    });
+  }
+}
+
+function flashSaveStatus(text) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = text;
+  el.classList.add('visible');
+  clearTimeout(flashSaveStatus._t);
+  flashSaveStatus._t = setTimeout(() => el.classList.remove('visible'), 2000);
+}
+
+function showSyncing() {
+  const el = document.getElementById('saveStatus');
+  el.textContent = '⟳ Syncing…';
+  el.classList.add('visible');
+}
+
+// Migrates orders saved under old pipeline into current data model.
+function migrateProjects(list) {
+  return list.map(p => {
+    const m = { ...p };
+    if (m.stage === 'digitizing') {
+      m.stage = 'pre_production';
+      if (m.needsDigitizing == null) m.needsDigitizing = true;
+    } else if (m.stage === 'dtf_order') {
+      m.stage = 'pre_production';
+      if (m.includesDTF == null) m.includesDTF = true;
+    } else if (m.stage === 'received') {
+      m.stage = 'pre_production';
+    } else if (m.stage === 'invoiced') {
+      m.stage = 'paid';
+    }
+    if (!STAGES.some(s => s.id === m.stage)) m.stage = 'pre_production';
+    if (m.priority == null) m.priority = 3;
+    if (m.designDetails || m.itemPrice || m.embDtfPrice) {
+      if (!m.items || m.items.length === 0) m.items = [{}];
+      const first = m.items[0];
+      if (!first.designDetails && m.designDetails) first.designDetails = m.designDetails;
+      if (!first.itemPrice && m.itemPrice) first.itemPrice = m.itemPrice;
+      if (!first.embDtfPrice && m.embDtfPrice) first.embDtfPrice = m.embDtfPrice;
+      delete m.designDetails; delete m.itemPrice; delete m.embDtfPrice;
+    }
+    return m;
+  });
+}
+
+async function loadData() {
+  showSyncing();
+  try {
+    await ensureSheet();
+    const raw = await sheetsGet(`${SHEET_NAME}!A1`);
+    projects = raw ? migrateProjects(JSON.parse(raw)) : [];
+    const title = await sheetsGet(`${SHEET_NAME}!B1`);
+    if (title) document.getElementById('boardTitle').value = title;
+    document.getElementById('errorBanner').hidden = true;
+    flashSaveStatus('✓ Loaded');
+  } catch (err) {
+    showError('Could not load from Google Sheets: ' + err.message);
+    projects = [];
+  }
+}
+
+async function persistProjects() {
+  showSyncing();
+  try {
+    await sheetsSet(`${SHEET_NAME}!A1`, JSON.stringify(projects));
+    document.getElementById('errorBanner').hidden = true;
+    flashSaveStatus('✓ Saved');
+  } catch (err) {
+    showError('Could not save to Google Sheets: ' + err.message + ' — changes are held in memory but may be lost on reload.');
+  }
+}
+
+async function persistTitle(title) {
+  try { await sheetsSet(`${SHEET_NAME}!B1`, title); } catch (_) {}
+}
+
+
+/* ---------- rendering ---------- */
+function getFiltered() {
+  const term = searchTerm.trim().toLowerCase();
+  return term
+    ? projects.filter(p =>
+        (p.companyName || '').toLowerCase().includes(term) ||
+        (p.contactName || '').toLowerCase().includes(term))
+    : projects;
+}
+
+function getActiveFiltered() {
+  return getFiltered().filter(p => p.stage !== 'archived');
+}
+
+function renderAll() {
+  renderBoard();
+  renderMasterLists();
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  const filtered = getFiltered();
+  const mainStages = STAGES.filter(s => s.id !== 'archived');
+  const archiveStage = STAGES.find(s => s.id === 'archived');
+
+  board.innerHTML = [...mainStages, archiveStage].map(stage => {
+    const items = filtered.filter(p => p.stage === stage.id);
+    const isArchive = stage.id === 'archived';
+    return `
+      <section class="column ${isArchive ? 'column-archive' : ''}">
+        <header class="column-header" style="--stage-color:${stage.color}">
+          <span class="dot"></span>
+          <h2>${stage.label}</h2>
+          <span class="count">${items.length}</span>
+        </header>
+        <div class="cards">
+          ${items.length ? items.map(renderCard).join('') : '<p class="empty">No orders here yet.</p>'}
+        </div>
+      </section>
+    `;
+  }).join('');
+}
+
+function renderCard(p) {
+  const stage = STAGES.find(s => s.id === p.stage) || STAGES[0];
+  const total = calcTotal(p);
+  const priority = p.priority || 3;
+  const isArchived = p.stage === 'archived';
+  const deleteLabel = deleteConfirmId === p.id ? 'Confirm?' : '✕';
+  const deleteClass = deleteConfirmId === p.id ? 'icon-btn delete-btn confirming' : 'icon-btn delete-btn';
+
+  const itemsHtml = (p.items || []).filter(it => it.type || it.qty).map(it => {
+    const qty = Number(it.qty) || 1;
+    const unitTotal = (Number(it.itemPrice) || 0) + (Number(it.embDtfPrice) || 0);
+    const subtotal = unitTotal * qty;
+    return `<div class="item-detail">
+      <span class="item-detail-name">${escapeHtml(it.type || 'Item')}${it.qty ? ` <span class="item-detail-qty">×${escapeHtml(String(it.qty))}</span>` : ''}</span>
+      ${it.designDetails ? `<span class="item-detail-design">${escapeHtml(it.designDetails)}</span>` : ''}
+      <span class="item-detail-prices">
+        ${it.itemPrice ? `<span>Garment $${fmt(it.itemPrice)}/ea</span>` : ''}
+        ${it.embDtfPrice ? `<span>Emb/DTF $${fmt(it.embDtfPrice)}/ea</span>` : ''}
+        ${subtotal ? `<strong>$${fmt(subtotal)}</strong>` : ''}
+      </span>
+    </div>`;
+  }).join('');
+
+  const prepTags = [];
+  if (p.needsDigitizing) {
+    prepTags.push(`<label class="prep-tag ${p.digitizingDone ? 'done' : ''}">
+      <input type="checkbox" class="prep-toggle" data-id="${p.id}" data-field="digitizingDone" ${p.digitizingDone ? 'checked' : ''}> Digitizing
+    </label>`);
+  }
+  if (p.includesDTF) {
+    prepTags.push(`<label class="prep-tag ${p.dtfOrdered ? 'done' : ''}">
+      <input type="checkbox" class="prep-toggle" data-id="${p.id}" data-field="dtfOrdered" ${p.dtfOrdered ? 'checked' : ''}> DTF ordered
+    </label>`);
+  }
+  prepTags.push(`<label class="prep-tag ${p.itemsOrdered ? 'done' : ''}">
+    <input type="checkbox" class="prep-toggle" data-id="${p.id}" data-field="itemsOrdered" ${p.itemsOrdered ? 'checked' : ''}> Items ordered
+  </label>`);
+
+  return `
+    <article class="card${isArchived ? ' card-archived' : ''}" style="--stage-color:${stage.color}">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="priority-badge" style="--p-color:${PRIORITY_COLORS[priority] || PRIORITY_COLORS[3]}">P${priority}</span>
+          <h3>${escapeHtml(p.companyName) || 'Untitled order'}</h3>
+        </div>
+        <div class="card-actions">
+          <button class="icon-btn edit-btn" data-id="${p.id}" type="button" title="Edit" aria-label="Edit order">✎</button>
+          <button class="icon-btn dup-btn" data-id="${p.id}" type="button" title="Duplicate" aria-label="Duplicate order">⎘</button>
+          <button class="${deleteClass}" data-id="${p.id}" type="button" title="Delete" aria-label="Delete order">${deleteLabel}</button>
+        </div>
+      </div>
+      ${p.contactName ? `<p class="contact">${escapeHtml(p.contactName)}</p>` : ''}
+      ${itemsHtml ? `<div class="item-details">${itemsHtml}</div>` : ''}
+      ${p.notes ? `<p class="notes">${escapeHtml(p.notes)}</p>` : ''}
+      <div class="prep-tags">${prepTags.join('')}</div>
+      <div class="card-footer">
+        <div class="card-footer-dates">
+          <span class="date">Added: ${formatDate(p.createdAt)}</span>
+        </div>
+        <div class="card-footer-right">
+          ${total ? `<span class="card-total">$${fmt(total)}</span>` : ''}
+          <select class="stage-select" data-id="${p.id}" aria-label="Change stage">
+            ${STAGES.map(s => `<option value="${s.id}" ${s.id === p.stage ? 'selected' : ''}>${s.label}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+/* ---------- master list (dashboard) ---------- */
+function renderMlPanel(containerId, list, mode, field) {
+  const el = document.getElementById(containerId);
+  const countEl = document.getElementById(containerId + '-count');
+  if (countEl) countEl.textContent = list.length;
+
+  if (!list.length) {
+    el.innerHTML = '<p class="ml-empty">Nothing here.</p>';
+    return;
+  }
+  el.innerHTML = list.map(p => {
+    const priority = p.priority || 3;
+    const name = escapeHtml(p.companyName) || 'Untitled order';
+    const checkbox = mode === 'check'
+      ? `<input type="checkbox" class="ml-toggle" data-id="${p.id}" data-field="${field}">`
+      : '';
+    return `
+      <div class="ml-row" data-id="${p.id}">
+        ${checkbox}
+        <span class="priority-badge" style="--p-color:${PRIORITY_COLORS[priority] || PRIORITY_COLORS[3]}">P${priority}</span>
+        <span class="ml-name">${name}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderMasterLists() {
+  const filtered = getActiveFiltered();
+
+  const byPriorityThenDate = (a, b) => {
+    const pa = a.priority || 3, pb = b.priority || 3;
+    if (pa !== pb) return pa - pb;
+    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+  };
+
+  const priorityList = [...filtered].sort(byPriorityThenDate);
+  const itemsToOrder = filtered.filter(p => !p.itemsOrdered).sort(byPriorityThenDate);
+  const needsDigitizing = filtered.filter(p => p.needsDigitizing && !p.digitizingDone).sort(byPriorityThenDate);
+  const dtfToOrder = filtered.filter(p => p.includesDTF && !p.dtfOrdered).sort(byPriorityThenDate);
+  const invoicesToComplete = filtered.filter(p => p.stage !== 'paid' && !p.invoiceSent).sort(byPriorityThenDate);
+
+  renderMlPanel('ml-priority', priorityList, 'plain');
+  renderMlPanel('ml-items', itemsToOrder, 'check', 'itemsOrdered');
+  renderMlPanel('ml-digitizing', needsDigitizing, 'check', 'digitizingDone');
+  renderMlPanel('ml-dtf', dtfToOrder, 'check', 'dtfOrdered');
+  renderMlPanel('ml-invoices', invoicesToComplete, 'check', 'invoiceSent');
+}
+
+
+/* ---------- item rows in form ---------- */
+function renderItemRows() {
+  const container = document.getElementById('itemRows');
+  container.innerHTML = formItems.map((it, idx) => `
+    <div class="item-row" data-idx="${idx}">
+      <div class="item-row-top">
+        <input type="text" class="item-type" placeholder="Garment / item type" value="${escapeHtml(it.type || '')}">
+        <input type="number" class="item-qty" placeholder="Qty" min="0" inputmode="numeric" value="${it.qty === '' || it.qty == null ? '' : it.qty}">
+        <button type="button" class="icon-btn remove-item-row" data-idx="${idx}" aria-label="Remove this item">✕</button>
+      </div>
+      <textarea class="item-design" placeholder="Design details (placement, thread colors, file…)" rows="2">${escapeHtml(it.designDetails || '')}</textarea>
+      <div class="item-prices-row">
+        <label class="item-price-label">Garment $<input type="number" class="item-itemprice" step="0.01" min="0" inputmode="decimal" value="${it.itemPrice || ''}"></label>
+        <label class="item-price-label">Emb/DTF $<input type="number" class="item-embdtfprice" step="0.01" min="0" inputmode="decimal" value="${it.embDtfPrice || ''}"></label>
+      </div>
+    </div>
+  `).join('');
+}
+function syncItemRowsFromDOM() {
+  const rows = document.querySelectorAll('#itemRows .item-row');
+  formItems = Array.from(rows).map(row => ({
+    type: row.querySelector('.item-type').value,
+    qty: row.querySelector('.item-qty').value,
+    designDetails: row.querySelector('.item-design').value,
+    itemPrice: row.querySelector('.item-itemprice').value,
+    embDtfPrice: row.querySelector('.item-embdtfprice').value,
+  }));
+}
+
+/* ---------- modal ---------- */
+function openModal(id) {
+  editingId = id || null;
+  const p = id ? projects.find(x => x.id === id) : null;
+
+  document.getElementById('modalTitle').textContent = p ? 'Edit order' : 'New order';
+  document.getElementById('f-companyName').value = p?.companyName || '';
+  document.getElementById('f-contactName').value = p?.contactName || '';
+  document.getElementById('f-shippingPrice').value = p?.shippingPrice || '';
+  document.getElementById('f-notes').value = p?.notes || '';
+  document.getElementById('f-stage').value = p?.stage || 'pre_production';
+  document.getElementById('f-priority').value = p?.priority || 3;
+
+  const needsDigitizing = !!p?.needsDigitizing;
+  const includesDTF = !!p?.includesDTF;
+  document.getElementById('f-needsDigitizing').checked = needsDigitizing;
+  document.getElementById('f-includesDTF').checked = includesDTF;
+  document.getElementById('f-digitizingDone').checked = !!p?.digitizingDone;
+  document.getElementById('f-dtfOrdered').checked = !!p?.dtfOrdered;
+  document.getElementById('f-itemsOrdered').checked = !!p?.itemsOrdered;
+  document.getElementById('f-digitizingDoneWrap').hidden = !needsDigitizing;
+  document.getElementById('f-dtfOrderedWrap').hidden = !includesDTF;
+  document.getElementById('stageFieldWrap').hidden = !p;
+
+  formItems = (p && p.items && p.items.length)
+    ? p.items.map(it => ({ ...it }))
+    : [{ type: '', qty: '', designDetails: '', itemPrice: '', embDtfPrice: '' }];
+  renderItemRows();
+  updateFormTotal();
+
+  document.getElementById('modalOverlay').hidden = false;
+  document.getElementById('f-companyName').focus();
+}
+function closeModal() {
+  document.getElementById('modalOverlay').hidden = true;
+  editingId = null;
+}
+function updateFormTotal() {
+  syncItemRowsFromDOM();
+  const itemsTotal = formItems.reduce((sum, it) => {
+    const qty = Number(it.qty) || 1;
+    return sum + ((parseFloat(it.itemPrice) || 0) + (parseFloat(it.embDtfPrice) || 0)) * qty;
+  }, 0);
+  const shipping = parseFloat(document.getElementById('f-shippingPrice').value) || 0;
+  document.getElementById('formTotal').textContent = '$' + (itemsTotal + shipping).toFixed(2);
+}
+
+/* ---------- events ---------- */
+document.getElementById('newOrderBtn').addEventListener('click', () => openModal(null));
+document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target.id === 'modalOverlay') closeModal();
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchTerm = e.target.value;
+  renderAll();
+});
+
+document.getElementById('boardTitle').addEventListener('change', e => {
+  const title = e.target.value.trim() || 'Order Board';
+  e.target.value = title;
+  persistTitle(title);
+});
+
+document.getElementById('addItemRowBtn').addEventListener('click', () => {
+  syncItemRowsFromDOM();
+  formItems.push({ type: '', qty: '', designDetails: '', itemPrice: '', embDtfPrice: '' });
+  renderItemRows();
+});
+document.getElementById('itemRows').addEventListener('click', e => {
+  const btn = e.target.closest('.remove-item-row');
+  if (!btn) return;
+  syncItemRowsFromDOM();
+  const idx = Number(btn.dataset.idx);
+  formItems.splice(idx, 1);
+  if (formItems.length === 0) formItems.push({ type: '', qty: '' });
+  renderItemRows();
+});
+
+document.getElementById('f-shippingPrice').addEventListener('input', updateFormTotal);
+document.getElementById('itemRows').addEventListener('input', e => {
+  if (e.target.classList.contains('item-itemprice') ||
+      e.target.classList.contains('item-embdtfprice') ||
+      e.target.classList.contains('item-qty')) {
+    updateFormTotal();
+  }
+});
+
+document.getElementById('f-needsDigitizing').addEventListener('change', e => {
+  document.getElementById('f-digitizingDoneWrap').hidden = !e.target.checked;
+  if (!e.target.checked) document.getElementById('f-digitizingDone').checked = false;
+});
+document.getElementById('f-includesDTF').addEventListener('change', e => {
+  document.getElementById('f-dtfOrderedWrap').hidden = !e.target.checked;
+  if (!e.target.checked) document.getElementById('f-dtfOrdered').checked = false;
+});
+
+async function saveOrder() {
+  const saveBtn = document.getElementById('saveOrderBtn');
+  const originalLabel = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+
+  try {
+    syncItemRowsFromDOM();
+    const items = formItems
+      .map(it => ({
+        type: (it.type || '').trim(),
+        qty: it.qty === '' || it.qty == null ? '' : Number(it.qty),
+        designDetails: (it.designDetails || '').trim(),
+        itemPrice: parseFloat(it.itemPrice) || 0,
+        embDtfPrice: parseFloat(it.embDtfPrice) || 0,
+      }))
+      .filter(it => it.type || it.qty);
+
+    const needsDigitizing = document.getElementById('f-needsDigitizing').checked;
+    const includesDTF = document.getElementById('f-includesDTF').checked;
+
+    const data = {
+      companyName: document.getElementById('f-companyName').value.trim(),
+      contactName: document.getElementById('f-contactName').value.trim(),
+      items,
+      shippingPrice: numVal('f-shippingPrice'),
+      notes: document.getElementById('f-notes').value.trim(),
+      priority: parseInt(document.getElementById('f-priority').value, 10) || 3,
+      needsDigitizing,
+      digitizingDone: document.getElementById('f-digitizingDone').checked,
+      includesDTF,
+      dtfOrdered: document.getElementById('f-dtfOrdered').checked,
+      itemsOrdered: document.getElementById('f-itemsOrdered').checked,
+    };
+
+    if (editingId) {
+      data.stage = document.getElementById('f-stage').value;
+      const p = projects.find(x => x.id === editingId);
+      if (p) Object.assign(p, data);
+      else projects.push({ id: genId(), createdAt: new Date().toISOString(), ...data });
+    } else {
+      // New orders route automatically: nothing to prep -> straight to Stitching/Printing,
+      // otherwise into Digitizing / DTF Prep.
+      data.stage = (!needsDigitizing && !includesDTF) ? 'stitching_printing' : 'pre_production';
+      projects.push({ id: genId(), createdAt: new Date().toISOString(), ...data });
+    }
+
+    try {
+      await persistProjects();
+    } catch (err) {
+      showError('Save error: ' + (err && err.message ? err.message : String(err)));
+    }
+  } catch (err) {
+    showError('Save error: ' + (err && err.message ? err.message : String(err)));
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = originalLabel;
+    closeModal();
+    renderAll();
+  }
+}
+
+document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
+
+// Let pressing Enter in a text field save the order (textareas keep normal newline behavior)
+document.getElementById('projectForm').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+    e.preventDefault();
+    saveOrder();
+  }
+});
+
+/* board: edit / delete / duplicate / stage change / prep-toggle via delegation */
+document.getElementById('board').addEventListener('click', e => {
+  if (e.target.classList.contains('prep-toggle')) {
+    const id = e.target.dataset.id;
+    const field = e.target.dataset.field;
+    const p = projects.find(x => x.id === id);
+    if (p) { p[field] = e.target.checked; persistProjects(); renderAll(); }
+    return;
+  }
+
+  const dupBtn = e.target.closest('.dup-btn');
+  if (dupBtn) {
+    const src = projects.find(x => x.id === dupBtn.dataset.id);
+    if (src) {
+      const dup = JSON.parse(JSON.stringify(src));
+      dup.id = genId();
+      dup.createdAt = new Date().toISOString();
+      dup.digitizingDone = false;
+      dup.dtfOrdered = false;
+      dup.itemsOrdered = false;
+      dup.invoiceSent = false;
+      projects.push(dup);
+      persistProjects();
+      renderAll();
+    }
+    return;
+  }
+
+  const delBtn = e.target.closest('.delete-btn');
+  if (delBtn) {
+    const id = delBtn.dataset.id;
+    if (deleteConfirmId === id) {
+      projects = projects.filter(p => p.id !== id);
+      deleteConfirmId = null;
+      persistProjects();
+      renderAll();
+    } else {
+      deleteConfirmId = id;
+      renderBoard();
+      setTimeout(() => {
+        if (deleteConfirmId === id) { deleteConfirmId = null; renderBoard(); }
+      }, 3000);
+    }
+    return;
+  }
+
+  // Clicking anywhere else on the card opens the edit modal
+  const card = e.target.closest('.card');
+  if (card) {
+    // Ignore clicks on interactive elements: buttons, selects, checkboxes, labels wrapping them
+    const interactive = e.target.closest('button, select, input, label');
+    if (!interactive) openModal(card.querySelector('.edit-btn').dataset.id);
+  }
+});
+document.getElementById('board').addEventListener('change', e => {
+  if (e.target.classList.contains('stage-select')) {
+    const id = e.target.dataset.id;
+    const p = projects.find(x => x.id === id);
+    if (p) { p.stage = e.target.value; persistProjects(); renderAll(); }
+  }
+});
+
+/* master list (dashboard): toggle checkboxes / open project on row click */
+document.getElementById('masterlist').addEventListener('click', e => {
+  if (e.target.classList.contains('ml-toggle')) {
+    const id = e.target.dataset.id;
+    const field = e.target.dataset.field;
+    const p = projects.find(x => x.id === id);
+    if (p) { p[field] = e.target.checked; persistProjects(); renderAll(); }
+    return;
+  }
+  const row = e.target.closest('.ml-row');
+  if (row) openModal(row.dataset.id);
+});
+
+/* clear all */
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  const btn = document.getElementById('clearAllBtn');
+  if (clearConfirm) {
+    projects = [];
+    persistProjects();
+    renderAll();
+    clearConfirm = false;
+    btn.textContent = 'Clear all';
+  } else {
+    clearConfirm = true;
+    btn.textContent = 'Confirm clear?';
+    setTimeout(() => {
+      if (clearConfirm) { clearConfirm = false; btn.textContent = 'Clear all'; }
+    }, 3000);
+  }
+});
+
+/* ---------- init ---------- */
+async function init() {
+  document.getElementById('f-stage').innerHTML = STAGES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+  try {
+    await loadData();
+  } catch (err) {
+    showError('Could not load saved data: ' + (err && err.message ? err.message : String(err)));
+  } finally {
+    renderAll();
+  }
+}
+init();
+</script>
+</body>
+</html>
