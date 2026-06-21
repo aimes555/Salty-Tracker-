@@ -524,6 +524,7 @@ body {
   </div>
   <div class="topbar-actions">
     <input type="search" id="searchInput" placeholder="Search company or contact..." aria-label="Search orders">
+    <button id="syncBtn" class="btn-secondary small" type="button" title="Sync with Google Sheets">&#8635; Sync</button>
     <button id="newOrderBtn" class="btn-primary" type="button">+ New order</button>
     <button id="clearAllBtn" class="btn-secondary small" type="button" title="Delete all saved orders">Clear all</button>
   </div>
@@ -1027,6 +1028,20 @@ function updateFormTotal() {
 
 /* ---------- events ---------- */
 document.getElementById('newOrderBtn').addEventListener('click', () => openModal(null));
+
+document.getElementById('syncBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  btn.textContent = 'Syncing...';
+  try {
+    await loadData();
+    renderAll();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '&#8635; Sync';
+    btn.innerHTML = '&#8635; Sync';
+  }
+});
 document.getElementById('closeModalBtn').addEventListener('click', closeModal);
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 document.getElementById('modalOverlay').addEventListener('click', e => {
