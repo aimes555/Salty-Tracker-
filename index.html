@@ -3,8 +3,9 @@
 <head>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Order Board</title>
+<title>Salty Tracker</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -517,12 +518,12 @@ body {
 
 <header class="topbar">
   <div class="brand">
-    <input id="boardTitle" class="board-title" value="Order Board" aria-label="Board title (click to rename)">
+    <input id="boardTitle" class="board-title" value="Salty Tracker" aria-label="Board title (click to rename)">
     <span class="brand-sub">Embroidery &amp; DTF Workflow</span>
     <span id="saveStatus" class="save-status" aria-live="polite"></span>
   </div>
   <div class="topbar-actions">
-    <input type="search" id="searchInput" placeholder="Search company or contact…" aria-label="Search orders">
+    <input type="search" id="searchInput" placeholder="Search company or contact..." aria-label="Search orders">
     <button id="newOrderBtn" class="btn-primary" type="button">+ New order</button>
     <button id="clearAllBtn" class="btn-secondary small" type="button" title="Delete all saved orders">Clear all</button>
   </div>
@@ -560,14 +561,14 @@ body {
 </section>
 
 <main class="board" id="board">
-  <div class="loading-screen">Loading your orders…</div>
+  <div class="loading-screen">Loading your orders...</div>
 </main>
 
 <div class="modal-overlay" id="modalOverlay" hidden>
   <div class="modal">
     <div class="modal-header">
       <h2 id="modalTitle">New order</h2>
-      <button class="icon-btn" id="closeModalBtn" type="button" aria-label="Close">✕</button>
+      <button class="icon-btn" id="closeModalBtn" type="button" aria-label="Close">&#x2715;</button>
     </div>
     <div id="projectForm">
       <div class="form-grid">
@@ -581,11 +582,11 @@ body {
 
       <label class="priority-field">Priority
         <select id="f-priority">
-          <option value="1">1 — Highest</option>
+          <option value="1">1 - Highest</option>
           <option value="2">2</option>
-          <option value="3" selected>3 — Medium</option>
+          <option value="3" selected>3 - Medium</option>
           <option value="4">4</option>
-          <option value="5">5 — Lowest</option>
+          <option value="5">5 - Lowest</option>
         </select>
       </label>
 
@@ -711,7 +712,7 @@ function flashSaveStatus(text) {
 
 function showSyncing() {
   const el = document.getElementById('saveStatus');
-  el.textContent = '⟳ Syncing…';
+  el.textContent = 'Syncing...';
   el.classList.add('visible');
 }
 
@@ -754,7 +755,7 @@ async function loadData() {
     catch (e) { projects = []; }
     if (json.title) document.getElementById('boardTitle').value = json.title;
     document.getElementById('errorBanner').hidden = true;
-    flashSaveStatus('✓ Loaded');
+    flashSaveStatus('&#10003; Loaded');
   } catch (err) {
     showError('Could not load from Google Sheets: ' + err.message);
     projects = [];
@@ -770,9 +771,9 @@ async function persistProjects() {
     });
     if (!r.ok) throw new Error(`Server responded with ${r.status}`);
     document.getElementById('errorBanner').hidden = true;
-    flashSaveStatus('✓ Saved');
+    flashSaveStatus('&#10003; Saved');
   } catch (err) {
-    showError('Could not save to Google Sheets: ' + err.message + ' — changes are held in memory but may be lost on reload.');
+    showError('Could not save to Google Sheets: ' + err.message + ' - changes are held in memory but may be lost on reload.');
   }
 }
 
@@ -834,7 +835,7 @@ function renderCard(p) {
   const total = calcTotal(p);
   const priority = p.priority || 3;
   const isArchived = p.stage === 'archived';
-  const deleteLabel = deleteConfirmId === p.id ? 'Confirm?' : '✕';
+  const deleteLabel = deleteConfirmId === p.id ? 'Del?' : '&#x2715;';
   const deleteClass = deleteConfirmId === p.id ? 'icon-btn delete-btn confirming' : 'icon-btn delete-btn';
 
   const itemsHtml = (p.items || []).filter(it => it.type || it.qty).map(it => {
@@ -842,7 +843,7 @@ function renderCard(p) {
     const unitTotal = (Number(it.itemPrice) || 0) + (Number(it.embDtfPrice) || 0);
     const subtotal = unitTotal * qty;
     return `<div class="item-detail">
-      <span class="item-detail-name">${escapeHtml(it.type || 'Item')}${it.qty ? ` <span class="item-detail-qty">×${escapeHtml(String(it.qty))}</span>` : ''}</span>
+      <span class="item-detail-name">${escapeHtml(it.type || 'Item')}${it.qty ? ` <span class="item-detail-qty">x${escapeHtml(String(it.qty))}</span>` : ''}</span>
       ${it.designDetails ? `<span class="item-detail-design">${escapeHtml(it.designDetails)}</span>` : ''}
       <span class="item-detail-prices">
         ${it.itemPrice ? `<span>Garment $${fmt(it.itemPrice)}/ea</span>` : ''}
@@ -875,9 +876,9 @@ function renderCard(p) {
           <h3>${escapeHtml(p.companyName) || 'Untitled order'}</h3>
         </div>
         <div class="card-actions">
-          <button class="icon-btn edit-btn" data-id="${p.id}" type="button" title="Edit" aria-label="Edit order">✎</button>
-          <button class="icon-btn dup-btn" data-id="${p.id}" type="button" title="Duplicate" aria-label="Duplicate order">⎘</button>
-          <button class="${deleteClass}" data-id="${p.id}" type="button" title="Delete" aria-label="Delete order">${deleteLabel}</button>
+          <button class="icon-btn edit-btn" data-id="${p.id}" type="button" title="Edit" aria-label="Edit order">&#9998;</button>
+          <button class="icon-btn dup-btn" data-id="${p.id}" type="button" title="Duplicate" aria-label="Duplicate order">&#10064;</button>
+          <button class="${deleteClass}" data-id="${p.id}" type="button" title="Delete" aria-label="Delete order">${deleteConfirmId === p.id ? 'Del?' : '&#x2715;'}</button>
         </div>
       </div>
       ${p.contactName ? `<p class="contact">${escapeHtml(p.contactName)}</p>` : ''}
@@ -956,9 +957,9 @@ function renderItemRows() {
       <div class="item-row-top">
         <input type="text" class="item-type" placeholder="Garment / item type" value="${escapeHtml(it.type || '')}">
         <input type="number" class="item-qty" placeholder="Qty" min="0" inputmode="numeric" value="${it.qty === '' || it.qty == null ? '' : it.qty}">
-        <button type="button" class="icon-btn remove-item-row" data-idx="${idx}" aria-label="Remove this item">✕</button>
+        <button type="button" class="icon-btn remove-item-row" data-idx="${idx}" aria-label="Remove this item">&#x2715;</button>
       </div>
-      <textarea class="item-design" placeholder="Design details (placement, thread colors, file…)" rows="2">${escapeHtml(it.designDetails || '')}</textarea>
+      <textarea class="item-design" placeholder="Design details (placement, thread colors, file...)" rows="2">${escapeHtml(it.designDetails || '')}</textarea>
       <div class="item-prices-row">
         <label class="item-price-label">Garment $<input type="number" class="item-itemprice" step="0.01" min="0" inputmode="decimal" value="${it.itemPrice || ''}"></label>
         <label class="item-price-label">Emb/DTF $<input type="number" class="item-embdtfprice" step="0.01" min="0" inputmode="decimal" value="${it.embDtfPrice || ''}"></label>
@@ -999,7 +1000,7 @@ function openModal(id) {
   document.getElementById('f-itemsOrdered').checked = !!p?.itemsOrdered;
   document.getElementById('f-digitizingDoneWrap').hidden = !needsDigitizing;
   document.getElementById('f-dtfOrderedWrap').hidden = !includesDTF;
-  document.getElementById('stageFieldWrap').hidden = !p;
+  document.getElementById('stageFieldWrap').hidden = false;
 
   formItems = (p && p.items && p.items.length)
     ? p.items.map(it => ({ ...it }))
@@ -1038,7 +1039,7 @@ document.getElementById('searchInput').addEventListener('input', e => {
 });
 
 document.getElementById('boardTitle').addEventListener('change', e => {
-  const title = e.target.value.trim() || 'Order Board';
+  const title = e.target.value.trim() || 'Salty Tracker';
   e.target.value = title;
   persistTitle(title);
 });
@@ -1080,7 +1081,7 @@ async function saveOrder() {
   const saveBtn = document.getElementById('saveOrderBtn');
   const originalLabel = saveBtn.textContent;
   saveBtn.disabled = true;
-  saveBtn.textContent = 'Saving…';
+  saveBtn.textContent = 'Saving...';
 
   try {
     syncItemRowsFromDOM();
@@ -1117,9 +1118,7 @@ async function saveOrder() {
       if (p) Object.assign(p, data);
       else projects.push({ id: genId(), createdAt: new Date().toISOString(), ...data });
     } else {
-      // New orders route automatically: nothing to prep -> straight to Stitching/Printing,
-      // otherwise into Digitizing / DTF Prep.
-      data.stage = (!needsDigitizing && !includesDTF) ? 'stitching_printing' : 'pre_production';
+      data.stage = document.getElementById('f-stage').value;
       projects.push({ id: genId(), createdAt: new Date().toISOString(), ...data });
     }
 
@@ -1154,7 +1153,14 @@ document.getElementById('board').addEventListener('click', e => {
     const id = e.target.dataset.id;
     const field = e.target.dataset.field;
     const p = projects.find(x => x.id === id);
-    if (p) { p[field] = e.target.checked; persistProjects(); renderAll(); }
+    if (p) {
+      p[field] = e.target.checked;
+      // Auto-advance to Test Stitch when digitizing is marked complete
+      if (field === 'digitizingDone' && e.target.checked && p.stage === 'pre_production') {
+        p.stage = 'test_stitch';
+      }
+      persistProjects(); renderAll();
+    }
     return;
   }
 
