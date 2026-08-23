@@ -463,7 +463,10 @@ body {
 .card-footer-dates { display: flex; flex-direction: column; gap: 1px; }
 .card-footer-right { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
 
-/* archive */
+.card-body { display: flex; flex-direction: column; }
+.card-collapsed .card-body { display: none; }
+.card-collapsed { cursor: pointer; }
+.collapse-btn { font-size: 0.7rem; }
 .column-archive .column-header { opacity: 0.85; }
 .card-archived { opacity: 0.75; }
 .card-archived .card-head h3 { color: var(--ink-soft); }
@@ -574,7 +577,8 @@ body {
     <div id="projectForm">
       <div class="form-grid">
         <label>Company name
-          <input type="text" id="f-companyName" autocomplete="off">
+          <input type="text" id="f-companyName" autocomplete="off" list="companyList">
+          <datalist id="companyList"></datalist>
         </label>
         <label>Contact name
           <input type="text" id="f-contactName" autocomplete="off">
@@ -659,6 +663,12 @@ let searchTerm = '';
 let editingId = null;
 let formItems = [];
 let deleteConfirmId = null;
+let collapsedCards = new Set();
+
+// After loading/saving, collapse any cards not already tracked
+function collapseNewCards() {
+  projects.forEach(p => collapsedCards.add(p.id));
+}
 let clearConfirm = false;
 
 /* ---------- helpers ---------- */
@@ -757,6 +767,7 @@ async function loadData() {
     if (json.title) document.getElementById('boardTitle').value = json.title;
     document.getElementById('errorBanner').hidden = true;
     flashSaveStatus('&#10003; Loaded');
+    collapseNewCards();
   } catch (err) {
     showError('Could not load from Google Sheets: ' + err.message);
     projects = [];
@@ -868,33 +879,40 @@ function renderCard(p) {
   prepTags.push(`<label class="prep-tag ${p.itemsOrdered ? 'done' : ''}">
     <input type="checkbox" class="prep-toggle" data-id="${p.id}" data-field="itemsOrdered" ${p.itemsOrdered ? 'checked' : ''}> Items ordered
   </label>`);
+  prepTags.push(`<label class="prep-tag ${p.invoiceSent ? 'done' : ''}">
+    <input type="checkbox" class="prep-toggle" data-id="${p.id}" data-field="invoiceSent" ${p.invoiceSent ? 'checked' : ''}> Invoice sent
+  </label>`);
+
+  const isCollapsed = collapsedCards.has(p.id);
 
   return `
-    <article class="card${isArchived ? ' card-archived' : ''}" style="--stage-color:${stage.color}">
+    <article class="card${isArchived ? ' card-archived' : ''}${isCollapsed ? ' card-collapsed' : ''}" style="--stage-color:${stage.color}" data-id="${p.id}">
       <div class="card-head">
         <div class="card-title">
           <span class="priority-badge" style="--p-color:${PRIORITY_COLORS[priority] || PRIORITY_COLORS[3]}">P${priority}</span>
           <h3>${escapeHtml(p.companyName) || 'Untitled order'}</h3>
         </div>
         <div class="card-actions">
-          <button class="icon-btn edit-btn" data-id="${p.id}" type="button" title="Edit" aria-label="Edit order">&#9998;</button>
+          <button class="icon-btn collapse-btn" data-id="${p.id}" type="button" title="${isCollapsed ? 'Expand' : 'Collapse'}" aria-label="${isCollapsed ? 'Expand card' : 'Collapse card'}">${isCollapsed ? '&#9660;' : '&#9650;'}</button>
           <button class="icon-btn dup-btn" data-id="${p.id}" type="button" title="Duplicate" aria-label="Duplicate order">&#10064;</button>
           <button class="${deleteClass}" data-id="${p.id}" type="button" title="Delete" aria-label="Delete order">${deleteConfirmId === p.id ? 'Del?' : '&#x2715;'}</button>
         </div>
       </div>
-      ${p.contactName ? `<p class="contact">${escapeHtml(p.contactName)}</p>` : ''}
-      ${itemsHtml ? `<div class="item-details">${itemsHtml}</div>` : ''}
-      ${p.notes ? `<p class="notes">${escapeHtml(p.notes)}</p>` : ''}
-      <div class="prep-tags">${prepTags.join('')}</div>
-      <div class="card-footer">
-        <div class="card-footer-dates">
-          <span class="date">Added: ${formatDate(p.createdAt)}</span>
-        </div>
-        <div class="card-footer-right">
-          ${total ? `<span class="card-total">$${fmt(total)}</span>` : ''}
-          <select class="stage-select" data-id="${p.id}" aria-label="Change stage">
-            ${STAGES.map(s => `<option value="${s.id}" ${s.id === p.stage ? 'selected' : ''}>${s.label}</option>`).join('')}
-          </select>
+      <div class="card-body">
+        ${p.contactName ? `<p class="contact">${escapeHtml(p.contactName)}</p>` : ''}
+        ${itemsHtml ? `<div class="item-details">${itemsHtml}</div>` : ''}
+        ${p.notes ? `<p class="notes">${escapeHtml(p.notes)}</p>` : ''}
+        <div class="prep-tags">${prepTags.join('')}</div>
+        <div class="card-footer">
+          <div class="card-footer-dates">
+            <span class="date">Added: ${formatDate(p.createdAt)}</span>
+          </div>
+          <div class="card-footer-right">
+            ${total ? `<span class="card-total">$${fmt(total)}</span>` : ''}
+            <select class="stage-select" data-id="${p.id}" aria-label="Change stage">
+              ${STAGES.map(s => `<option value="${s.id}" ${s.id === p.stage ? 'selected' : ''}>${s.label}</option>`).join('')}
+            </select>
+          </div>
         </div>
       </div>
     </article>
@@ -940,7 +958,8 @@ function renderMasterLists() {
   const itemsToOrder = filtered.filter(p => !p.itemsOrdered).sort(byPriorityThenDate);
   const needsDigitizing = filtered.filter(p => p.needsDigitizing && !p.digitizingDone).sort(byPriorityThenDate);
   const dtfToOrder = filtered.filter(p => p.includesDTF && !p.dtfOrdered).sort(byPriorityThenDate);
-  const invoicesToComplete = filtered.filter(p => p.stage !== 'paid' && !p.invoiceSent).sort(byPriorityThenDate);
+  const INVOICE_STAGES = new Set(['stitching_printing', 'shipped', 'paid']);
+  const invoicesToComplete = filtered.filter(p => INVOICE_STAGES.has(p.stage) && !p.invoiceSent).sort(byPriorityThenDate);
 
   renderMlPanel('ml-priority', priorityList, 'plain');
   renderMlPanel('ml-items', itemsToOrder, 'check', 'itemsOrdered');
@@ -1008,6 +1027,16 @@ function openModal(id) {
     : [{ type: '', qty: '', designDetails: '', itemPrice: '', embDtfPrice: '' }];
   renderItemRows();
   updateFormTotal();
+
+  // Populate company name datalist from existing projects
+  const seen = new Map();
+  projects.forEach(p => {
+    if (p.companyName && !seen.has(p.companyName.toLowerCase())) {
+      seen.set(p.companyName.toLowerCase(), p);
+    }
+  });
+  const dl = document.getElementById('companyList');
+  dl.innerHTML = [...seen.values()].map(p => `<option value="${escapeHtml(p.companyName)}">`).join('');
 
   document.getElementById('modalOverlay').hidden = false;
   document.getElementById('f-companyName').focus();
@@ -1083,6 +1112,17 @@ document.getElementById('itemRows').addEventListener('input', e => {
   }
 });
 
+// Autofill contact name when a known company is selected from the datalist
+document.getElementById('f-companyName').addEventListener('input', e => {
+  const val = e.target.value.trim().toLowerCase();
+  if (!val) return;
+  const match = projects.find(p => p.companyName && p.companyName.toLowerCase() === val);
+  if (match && match.contactName) {
+    const contactField = document.getElementById('f-contactName');
+    if (!contactField.value) contactField.value = match.contactName;
+  }
+});
+
 document.getElementById('f-needsDigitizing').addEventListener('change', e => {
   document.getElementById('f-digitizingDoneWrap').hidden = !e.target.checked;
   if (!e.target.checked) document.getElementById('f-digitizingDone').checked = false;
@@ -1147,6 +1187,7 @@ async function saveOrder() {
   } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = originalLabel;
+    collapseNewCards();
     closeModal();
     renderAll();
   }
@@ -1176,6 +1217,15 @@ document.getElementById('board').addEventListener('click', e => {
       }
       persistProjects(); renderAll();
     }
+    return;
+  }
+
+  const collapseBtn = e.target.closest('.collapse-btn');
+  if (collapseBtn) {
+    const id = collapseBtn.dataset.id;
+    if (collapsedCards.has(id)) collapsedCards.delete(id);
+    else collapsedCards.add(id);
+    renderBoard();
     return;
   }
 
@@ -1215,19 +1265,22 @@ document.getElementById('board').addEventListener('click', e => {
     return;
   }
 
-  // Clicking anywhere else on the card opens the edit modal
+  // Clicking anywhere on the card (not on interactive elements) opens the edit modal
   const card = e.target.closest('.card');
   if (card) {
-    // Ignore clicks on interactive elements: buttons, selects, checkboxes, labels wrapping them
     const interactive = e.target.closest('button, select, input, label');
-    if (!interactive) openModal(card.querySelector('.edit-btn').dataset.id);
+    if (!interactive) openModal(card.dataset.id);
   }
 });
 document.getElementById('board').addEventListener('change', e => {
   if (e.target.classList.contains('stage-select')) {
     const id = e.target.dataset.id;
     const p = projects.find(x => x.id === id);
-    if (p) { p.stage = e.target.value; persistProjects(); renderAll(); }
+    if (p) {
+      p.stage = e.target.value;
+      if (p.stage === 'paid') p.priority = 5;
+      persistProjects(); renderAll();
+    }
   }
 });
 
