@@ -1278,7 +1278,7 @@ document.getElementById('board').addEventListener('change', e => {
     const p = projects.find(x => x.id === id);
     if (p) {
       p.stage = e.target.value;
-      if (p.stage === 'paid') p.priority = 5;
+      if (p.stage === 'shipped') p.priority = 5;
       persistProjects(); renderAll();
     }
   }
